@@ -1166,12 +1166,13 @@ describe('CheckoutForm', () => {
 
     it('keeps focus in the field when the buyer presses the submit button', () => {
       const { update } = renderForm()
+      fireEvent.click(screen.getByText('mock ready'))
       const input = screen.getByLabelText('Cardholder name')
       fireEvent.change(input, { target: { value: 'Buyer Example' } })
+      const submitButton = screen.getByRole('button', { name: 'Pay now' })
+      expect(submitButton).toBeEnabled()
 
-      const defaultAllowed = fireEvent.mouseDown(
-        screen.getByRole('button', { name: 'Pay now' }),
-      )
+      const defaultAllowed = fireEvent.mouseDown(submitButton)
 
       expect(defaultAllowed).toBe(false)
       expect(update).not.toHaveBeenCalled()
