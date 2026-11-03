@@ -1,3 +1,4 @@
+import asyncio
 import json
 import math
 from collections.abc import Iterator, Mapping, Sequence
@@ -876,14 +877,11 @@ class TinybirdEventsQuery:
         count_sql, count_params = _compile(count_statement)
         ids_sql, ids_params = _compile(ids_statement)
 
-        count_rows = await client.query(
-            count_sql, parameters=count_params, db_statement=count_sql
+        count_rows, id_rows = await asyncio.gather(
+            client.query(count_sql, parameters=count_params, db_statement=count_sql),
+            client.query(ids_sql, parameters=ids_params, db_statement=ids_sql),
         )
         total = count_rows[0]["total"] if count_rows else 0
-
-        id_rows = await client.query(
-            ids_sql, parameters=ids_params, db_statement=ids_sql
-        )
         event_ids = [str(row["id"]) for row in id_rows]
 
         return event_ids, total
