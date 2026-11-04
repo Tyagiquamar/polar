@@ -218,9 +218,17 @@ class S3Service:
 
     def complete_multipart_upload(self, data: S3FileUploadCompleted) -> S3File:
         boto_arguments = data.get_boto3_arguments()
-        response = self.client.complete_multipart_upload(
-            Bucket=self.bucket, Key=data.path, **boto_arguments
-        )
+        try:
+            response = self.client.complete_multipart_upload(
+                Bucket=self.bucket, Key=data.path, **boto_arguments
+            )
+        except ClientError as exc:
+            raise S3FileError(
+                "Could not complete multipart upload. "
+                "The body's id must be upload.id from the file creation response, "
+                "not the File's own id.",
+                status_code=400,
+            ) from exc
         if not response:
             raise S3FileError("No response from S3")
 

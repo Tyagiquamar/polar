@@ -4,6 +4,10 @@ import pytest
 from botocore.client import ClientError
 
 from polar.integrations.aws.s3.exceptions import S3FileError
+from polar.integrations.aws.s3.schemas import (
+    S3FileUploadCompleted,
+    S3FileUploadCompletedPart,
+)
 from polar.integrations.aws.s3.service import S3Service
 
 
@@ -57,6 +61,42 @@ class TestGetObjectOrRaise:
             )
 
         assert exc_info.value.__cause__ is error
+
+
+class TestCompleteMultipartUpload:
+    def test_client_error_becomes_structured_400(self) -> None:
+        client = MagicMock()
+        error = ClientError(
+            {
+                "Error": {
+                    "Code": "NoSuchUpload",
+                    "Message": "The specified upload does not exist.",
+                }
+            },
+            "CompleteMultipartUpload",
+        )
+        client.complete_multipart_upload.side_effect = error
+        completed = S3FileUploadCompleted(
+            id="file-uuid-used-by-mistake",
+            path="path/to/file",
+            parts=[
+                S3FileUploadCompletedPart(
+                    number=1,
+                    checksum_etag='"abc123"',
+                    checksum_sha256_base64=None,
+                )
+            ],
+        )
+
+        with pytest.raises(S3FileError) as exc_info:
+            S3Service(bucket="bucket", client=client).complete_multipart_upload(
+                completed
+            )
+
+        assert exc_info.value.status_code == 400
+        assert "upload.id" in exc_info.value.message
+        assert exc_info.value.__cause__ is error
+        client.head_object.assert_not_called()
 
 
 class TestGetHeadOrRaise:

@@ -116,7 +116,12 @@ class S3FileUploadPart(S3FileCreatePart):
 
 
 class S3FileUploadMultipart(Schema):
-    id: str
+    id: str = Field(
+        description=(
+            "S3 multipart UploadId. This is not the File id. "
+            "Pass this value as the body's id when completing the upload."
+        )
+    )
     path: str
     parts: list[S3FileUploadPart]
 
@@ -128,12 +133,22 @@ class S3FileUpload(S3File):
 class S3FileUploadCompletedPart(Schema):
     number: int
     checksum_etag: Annotated[str, StripValidator]
-    checksum_sha256_base64: str | None
+    checksum_sha256_base64: Annotated[str, StripValidator] | None = None
 
 
 class S3FileUploadCompleted(Schema):
-    id: str
-    path: str
+    id: str = Field(
+        description=(
+            "S3 multipart UploadId from the file creation response (upload.id). "
+            "Do not send the File's own id."
+        )
+    )
+    path: str = Field(
+        description=(
+            "S3 object key from the file creation response (upload.path). "
+            "Do not substitute a different path."
+        )
+    )
     parts: list[S3FileUploadCompletedPart]
 
     @staticmethod

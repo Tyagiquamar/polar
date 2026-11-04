@@ -39,3 +39,29 @@ class TestS3FileUploadCompletedPart:
         arguments = completed.get_boto3_arguments()
 
         assert arguments["MultipartUpload"]["Parts"][0]["ETag"] == '"abc123"'
+
+    def test_checksum_sha256_base64_surrounding_whitespace_is_stripped(self) -> None:
+        part = S3FileUploadCompletedPart(
+            number=1,
+            checksum_etag='"abc123"',
+            checksum_sha256_base64="  dGVzdA==\r\n ",
+        )
+
+        assert part.checksum_sha256_base64 == "dGVzdA=="
+
+    def test_stripped_checksum_sha256_base64_reaches_boto3_arguments(self) -> None:
+        completed = S3FileUploadCompleted(
+            id="upload-id",
+            path="path/to/file",
+            parts=[
+                S3FileUploadCompletedPart(
+                    number=1,
+                    checksum_etag='"abc123"',
+                    checksum_sha256_base64="  dGVzdA==\r ",
+                )
+            ],
+        )
+
+        arguments = completed.get_boto3_arguments()
+
+        assert arguments["MultipartUpload"]["Parts"][0]["ChecksumSHA256"] == "dGVzdA=="
